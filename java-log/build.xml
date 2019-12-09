@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project basedir="." default="build" name="Java Log Extensions">
+    <property environment="env"/>
+    <property name="debuglevel" value="source,lines,vars"/>
+    <property name="target" value="1.8"/>
+    <property name="source" value="1.8"/>
+    <path id="Java Log Extensions.classpath">
+        <pathelement location="build/classes"/>
+    </path>
+    <target name="init">
+        <mkdir dir="build"/>
+    	<mkdir dir="build/classes"/>
+        <copy includeemptydirs="false" todir="build/classes">
+            <fileset dir="src/main/resources">
+                <exclude name="**/*.java"/>
+                <exclude name=".*"/>
+            </fileset>
+        </copy>
+    </target>
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+    <target depends="clean" name="cleanall"/>
+    <target depends="build-project" name="build" description="Build JAR"/>
+    <target depends="init" name="build-project">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="build/classes" includeantruntime="false" source="${source}" target="${target}">
+            <src path="src/main/java"/>
+            <src path="src/main/resources"/>
+            <exclude name=".*"/>
+            <classpath refid="Java Log Extensions.classpath"/>
+        </javac>
+    	<jar destfile="build/porters.automation.logger.extensions.jar" basedir="build/classes"/>
+    </target>
+    
+</project>

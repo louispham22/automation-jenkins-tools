@@ -1,0 +1,64 @@
+#!/bin/bash
+
+xmlstarlet sel -t -m 'test-run'\
+    -e 'stage'\
+        -a 'name' -v '@name' -b\
+        -a 'total' -v '@total' -b\
+        -a 'passed' -v '@passed' -b\
+        -a 'failed' -v '@failed' -b\
+        -a 'skipped' -v '@skipped' -b\
+        -a 'unstable' -v 'count(.//test-case[@result="Inconclusive"][count(.//property[@name="Bug"] | .//ancestor::test-suite/properties/property[@name="Bug"]) = 0])' -b\
+        -a 'triaged' -v 'count(.//test-case[@result="Inconclusive"][count(.//property[@name="Bug"] | .//ancestor::test-suite/properties/property[@name="Bug"]) > 0])' -b\
+        -c 'filter'\
+        -e 'results'\
+            -e 'failed'\
+                -m './/test-case[@result="Failed"]'\
+                    -s A:N:U 'count(.//property[@name="Bug"] | .//ancestor::test-suite/properties/property[@name="Bug"])'\
+                    -e 'test'\
+                        -a 'name' -v '@fullname' -b\
+                        -a 'duration' -v '@duration' -b\
+                        -m './/property[@name="Bug"] | .//ancestor::test-suite/properties/property[@name="Bug"]'\
+                            -e 'bug'\
+                                -a 'value' -v '@value' -b\
+                            -b\
+                        -b\
+                        -e 'reason'\
+                            -v './/message'\
+                        -b\
+                    -b\
+                -b\
+            -b\
+            -e 'unstable'\
+                -m './/test-case[@result="Inconclusive"][count(.//property[@name="Bug"] | .//ancestor::test-suite/properties/property[@name="Bug"]) = 0]'\
+                    -e 'test'\
+                        -a 'name' -v '@fullname' -b\
+                        -a 'duration' -v '@duration' -b\
+                        -e 'reason'\
+                            -v './/message'\
+                        -b\
+                    -b\
+                -b\
+            -b\
+            -e 'triaged'\
+                -m './/test-case[@result="Inconclusive"][count(.//property[@name="Bug"] | .//ancestor::test-suite/properties/property[@name="Bug"]) > 0]'\
+                    -e 'test'\
+                        -a 'name' -v '@fullname' -b\
+                        -a 'duration' -v '@duration' -b\
+                        -m './/property[@name="Bug"] | .//ancestor::test-suite/properties/property[@name="Bug"]'\
+                            -e 'bug'\
+                                -a 'value' -v '@value' -b\
+                            -b\
+                        -b\
+                    -b\
+                -b\
+            -b\
+            -e 'passed'\
+                -m './/test-case[@result="Passed"]'\
+                    -e 'test'\
+                        -a 'name' -v '@fullname' -b\
+                        -a 'duration' -v '@duration' -b\
+                    -b\
+                -b\
+            -b\
+        -b\
+    -b $1

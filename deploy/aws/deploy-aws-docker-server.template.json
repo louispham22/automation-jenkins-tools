@@ -1,0 +1,176 @@
+{
+	"AWSTemplateFormatVersion" : "2010-09-09",
+
+	"Description" : "Automation Test Docker Server",
+
+	"Parameters" : {
+		"InstanceType" : {
+			"Description" : "Docker Server EC2 instance type",
+			"Type" : "String",
+			"Default" : "c5d.large",
+			"AllowedValues" : [ "t3.nano", "t3.micro", "t3.small", "t3.medium", "t3.large", "m5.large", "m5.xlarge", "m5.2xlarge", "m5.4xlarge", "m5.12xlarge", "m5.24xlarge", "m5d.large", "m5d.xlarge", "m5d.2xlarge", "m5d.4xlarge", "m5d.12xlarge", "m5d.24xlarge", "c5.large", "c5.xlarge", "c5.2xlarge", "c5.4xlarge", "c5.9xlarge", "c5.18xlarge", "c5d.large", "c5d.xlarge", "c5d.2xlarge", "c5d.4xlarge", "c5d.9xlarge", "c5d.18xlarge", "r5.large", "r5.xlarge", "r5.2xlarge", "r5.4xlarge", "r5.12xlarge", "r5.24xlarge", "r5d.large", "r5d.xlarge", "r5d.2xlarge", "r5d.4xlarge", "r5d.12xlarge", "r5d.24xlarge"],
+			"ConstraintDescription" : "must be a valid EC2 instance type."
+		},
+		"DockerAccessCidrIp": {
+			"Description": "Lockdown Docker Client access to specified CIDR (default can be accessed from anywhere)",
+			"Type": "String",
+			"MinLength": "9",
+			"MaxLength": "18",
+			"Default": "0.0.0.0/0",
+			"AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+			"ConstraintDescription": "must be a valid CIDR range of the form x.x.x.x/x."
+		},
+		"AMI": {
+			"Description" : "Docker Server EC2 AMI",
+			"Type" : "AWS::EC2::Image::Id"
+		},
+		"DebugMode": {
+			"Description" : "In Debug Mode SSH access is enabled and a SSH Key Pair must be provided",
+			"Type": "String",
+			"Default": "false"
+		},
+		"KeyName": {
+			"Description" : "The SSH Key Pair to connect with in debug mode",
+			"Type": "AWS::EC2::KeyPair::KeyName",
+			"Default": "AutoTest.jenkins"
+		},
+		"EnvName": {
+			"Description" : "The AWS Automation environnement name",
+			"Type": "String",
+			"Default": "AutoTest"
+		},
+		"IpAddressCount": {
+			"Description": "Number of Additional IPs to assign to the instance.",
+			"Type": "Number",
+			"Default": 9,
+			"MinValue": 0,
+			"MaxValue": 49
+		},
+		"Version": {
+			"Description": "The version of the docker server AMI",
+			"Type": "String"			
+		}
+	},
+
+	"Mappings" : {
+		"AWSInstanceType2Disk" : {
+			"t3.nano"     : { "Disk" : "EBS"  },
+			"t3.micro"    : { "Disk" : "EBS"  },
+			"t3.small"    : { "Disk" : "EBS"  },
+			"t3.medium"   : { "Disk" : "EBS"  },
+			"t3.large"    : { "Disk" : "EBS"  },
+			"m5.large"    : { "Disk" : "EBS"  },
+			"m5.xlarge"   : { "Disk" : "EBS"  },
+			"m5.2xlarge"  : { "Disk" : "EBS"  },
+			"m5.4xlarge"  : { "Disk" : "EBS"  },
+			"m5.12xlarge" : { "Disk" : "EBS"  },
+			"m5.24xlarge" : { "Disk" : "EBS"  },
+			"m5d.large"    : { "Disk" : "NVMe"  },
+			"m5d.xlarge"   : { "Disk" : "NVMe"  },
+			"m5d.2xlarge"  : { "Disk" : "NVMe"  },
+			"m5d.4xlarge"  : { "Disk" : "NVMe"  },
+			"m5d.12xlarge" : { "Disk" : "NVMe"  },
+			"m5d.24xlarge" : { "Disk" : "NVMe"  },
+			"c5.large"    : { "Disk" : "EBS"  },
+			"c5.xlarge"   : { "Disk" : "EBS"  },
+			"c5.2xlarge"  : { "Disk" : "EBS"  },
+			"c5.4xlarge"  : { "Disk" : "EBS"  },
+			"c5.9xlarge"  : { "Disk" : "EBS"  },
+			"c5.18xlarge" : { "Disk" : "EBS"  },
+			"c5d.large"    : { "Disk" : "NVMe"  },
+			"c5d.xlarge"   : { "Disk" : "NVMe"  },
+			"c5d.2xlarge"  : { "Disk" : "NVMe"  },
+			"c5d.4xlarge"  : { "Disk" : "NVMe"  },
+			"c5d.9xlarge"  : { "Disk" : "NVMe"  },
+			"c5d.18xlarge" : { "Disk" : "NVMe"  },			
+			"r5.large"    : { "Disk" : "EBS"  },
+			"r5.xlarge"   : { "Disk" : "EBS"  },
+			"r5.2xlarge"  : { "Disk" : "EBS"  },
+			"r5.4xlarge"  : { "Disk" : "EBS"  },
+			"r5.12xlarge" : { "Disk" : "EBS"  },
+			"r5.24xlarge" : { "Disk" : "EBS"  },
+			"r5d.large"    : { "Disk" : "NVMe"  },
+			"r5d.xlarge"   : { "Disk" : "NVMe"  },
+			"r5d.2xlarge"  : { "Disk" : "NVMe"  },
+			"r5d.4xlarge"  : { "Disk" : "NVMe"  },
+			"r5d.12xlarge" : { "Disk" : "NVMe"  },
+			"r5d.24xlarge" : { "Disk" : "NVMe"  }
+		}
+	},
+
+	"Conditions": {
+		"UseEBS": { "Fn::Equals" : [
+			{ "Fn::FindInMap" : [ "AWSInstanceType2Disk", {"Ref": "InstanceType"}, "Disk" ] },
+			"EBS"
+		]},
+		"IsDebugMode" : { "Fn::Equals" : [ { "Ref": "DebugMode" }, "true" ]}
+	},
+
+	"Resources" : {
+		"EC2Instance" : {
+			"Type" : "AWS::EC2::Instance", 
+			"Properties" : {
+				"KeyName" : { "Fn::If": [ "IsDebugMode", { "Ref" : "KeyName" }, { "Ref" : "AWS::NoValue" } ] },
+				"InstanceType" : { "Ref" : "InstanceType" },
+				"ImageId" : { "Ref" : "AMI" },
+				"Monitoring": true,
+				"IamInstanceProfile":  {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-DockerServerProfile"}},
+				"BlockDeviceMappings" : [
+					{ "Fn::If": [
+						"UseEBS",
+						{
+							"DeviceName"  : "/dev/sdh",
+							"Ebs" : {
+								"DeleteOnTermination" : true,
+								"VolumeSize" : 50,
+								"VolumeType" : "gp2"
+							}
+						},
+						{
+							"DeviceName"  : "/dev/sdc",
+							"VirtualName" : "ephemeral0"
+						}
+					]}
+				],
+				"NetworkInterfaces": [{
+						"DeviceIndex": "0",
+						"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-DockerServerSubnetId"}},
+						"GroupSet" : [{ "Fn::GetAtt" : [ "EC2SecurityGroup", "GroupId" ] }],
+						"SecondaryPrivateIpAddressCount": { "Ref" : "IpAddressCount" }
+					}
+				],
+				"Tags": [
+					{ "Key": "Name", "Value" : "DockerServer" },
+					{ "Key": "Version", "Value" : {"Ref": "Version"} }
+				]
+			}
+		},
+
+		"EC2SecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"GroupDescription" : "Docker Access",
+				"SecurityGroupIngress" : [
+					{ "IpProtocol" : "tcp", "FromPort" : "2376", "ToPort" : "2376", "CidrIp" : { "Ref" : "DockerAccessCidrIp" }},
+					{ "IpProtocol" : "-1", "SourceSecurityGroupId" : {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-TestRunnerSecurityGroup"}}}
+				],
+				"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-VpcId"}}
+			}
+		},
+		"LogGroup": {
+			"Type": "AWS::Logs::LogGroup",
+			"Properties" : {
+				"LogGroupName" : {"Fn::Join": ["/", [ "DockerServer", { "Ref" : "EC2Instance" } ]]},
+				"RetentionInDays" : 7
+			},
+			"DeletionPolicy": "Retain"
+		}
+	},
+
+	"Outputs" : {
+		"InstanceId" : {
+			"Value" : { "Ref" : "EC2Instance" }, 
+			"Description" : "ID of the newly created EC2 instance"
+		}
+	}
+}

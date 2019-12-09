@@ -1,0 +1,33 @@
+{
+    "agent": {
+        "metric_collection_interval": 60,
+        "debug": false
+    },
+    "metrics": {
+        "append_dimensions": {
+            "InstanceId": "${aws:InstanceId}"
+        },
+        "metrics_collected": {
+            "disk": {
+                "measurement": ["disk_free", "disk_used_percent"]
+            },
+            "mem": {
+                "measurement": ["mem_used_percent"]
+            }
+        }
+    },
+    "logs": {
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                    {
+                        "file_path": "/var/log/secure*",
+                        "log_group_name": "AutoTest/var/log/secure",
+                        "timezone": "UTC"
+                    }
+                ]                
+            }
+        },
+        "log_stream_name":"{instance_id}"
+    }
+}

@@ -1,0 +1,122 @@
+{
+	"AWSTemplateFormatVersion" : "2010-09-09",
+
+	"Description" : "Automation Test Fake Mail Server",
+
+	"Parameters" : {
+		"AMI": {
+			"Description" : "Fake Mail EC2 AMI",
+			"Type" : "AWS::EC2::Image::Id"
+		},
+		"EnvName": {
+			"Description" : "The AWS Automation environnement name",
+			"Type": "String",
+			"Default": "AutoTest"
+		}
+	},
+
+	"Resources" : {
+		"EC2Instance" : {
+			"Type" : "AWS::EC2::Instance", 
+			"Properties" : {
+				"InstanceType" : "t3.nano",
+				"ImageId" : { "Ref" : "AMI" },
+				"Monitoring": true,
+				"IamInstanceProfile":  { "Ref" : "Profile" },
+				"NetworkInterfaces": [{
+						"DeviceIndex": "0",
+						"SubnetId": {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-InternalSubnetId"}},
+						"GroupSet" : [{ "Fn::GetAtt" : [ "EC2SecurityGroup", "GroupId" ] }]
+					}
+				],
+				"Tags": [
+					{ "Key": "Name", "Value" : "FakeMAil" }
+				]
+			}
+		},
+
+		"EC2SecurityGroup" : {
+			"Type" : "AWS::EC2::SecurityGroup",
+			"Properties" : {
+				"GroupDescription" : "Fake Mail",
+				"SecurityGroupIngress" : [
+					{ "IpProtocol" : "tcp", "FromPort" : "25", "ToPort" : "25", "CidrIp" : "0.0.0.0/0" }
+				],
+				"VpcId": {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-VpcId"}}
+			}
+		},
+		
+        "Role": {
+            "Type" : "AWS::IAM::Role",
+            "Properties" : {
+                "RoleName": {"Fn::Join": [ "-", [{"Ref":"EnvName"}, "Mail" ]]},
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [ {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": [ "ec2.amazonaws.com" ]
+                        },
+                        "Action": [ "sts:AssumeRole" ]
+                    } ]
+                }
+            }
+		},
+		
+        "Policy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": {"Fn::Join": [ "-", [{"Ref":"EnvName"}, "Mail" ]]},
+                "PolicyDocument": {
+                    "Version" : "2012-10-17",
+                    "Statement": [ {
+                        "Effect": "Allow",
+                        "Action": "*",
+                        "Resource": "*"
+                  } ] 
+                },
+                "Roles": [ {
+                    "Ref": "Role"
+                } ]
+            }
+        },
+		
+        "Profile":{
+            "Type" : "AWS::IAM::InstanceProfile",
+            "Properties" : {
+                "InstanceProfileName":  {"Fn::Join": [ "-", [{"Ref":"EnvName"}, "Mail" ]]},
+                "Roles" : [ {"Fn::Join": [ "-", [{"Ref":"EnvName"}, "Mail" ]]} ]
+            },
+            "DependsOn" : "Role"
+		},
+
+		"Records": {
+			"Type": "AWS::Route53::RecordSetGroup",
+			"Properties": {
+				"Comment": "AutoTest-Mail",
+				"HostedZoneName": { "Fn::Join": [ "", [  {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-DomainName"}}, "." ] ] },
+				"RecordSets": [
+					{ 
+						"Name": { "Fn::Join": [ "", [ "mail.", {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-DomainName"}}, "." ] ] },
+						"Type": "A",
+						"TTL": 3600,
+						"ResourceRecords": [ { "Fn::GetAtt" : [ "Ec2Instance", "PrivateIp" ] } ]
+					},
+					{ 
+						"Name": { "Fn::Join": [ "", [  {"Fn::ImportValue" : {"Fn::Sub" : "${EnvName}-DomainName"}}, "." ] ] },
+						"Type": "MX",
+						"TTL": 3600,
+						"ResourceRecords": [ "10 mail" ]
+					}
+				]				
+			}
+		}
+	},
+
+	"Outputs" : {
+		"InstanceId" : {
+			"Value" : { "Ref" : "EC2Instance" }, 
+			"Description" : "ID of the newly created EC2 instance"
+		}
+	}
+}

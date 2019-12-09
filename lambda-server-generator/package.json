@@ -1,0 +1,30 @@
+{
+  "name": "lambda-server-generator",
+  "version": "1.0.2",
+  "description": "Generate and setup a lambda server project with all deps",
+  "main": "dist/app",
+  "types": "dist/app",
+  "scripts": {
+    "prepare": "gulp"
+  },
+  "author": "arwyn.hainsworth@porters.jp",
+  "private": true,
+  "devDependencies": {
+    "@types/node": "^7.0.23",
+    "@types/request": "^2.0.3",
+    "@types/request-promise-native": "^1.0.7",
+    "del": "^3.0.0",
+    "gulp": "^3.9.1",
+    "gulp-install": "^1.1.0",
+    "gulp-sourcemaps": "^2.6.0",
+    "gulp-typescript": "^3.1.7",
+    "gulp-zip": "^4.0.0",
+    "merge2": "^1.1.0",
+    "run-sequence": "^2.0.0",
+    "typescript": "^2.5.0"
+  },
+  "dependencies": {
+    "request": "^2.83.0",
+    "request-promise-native": "^1.0.5"
+  }
+}
